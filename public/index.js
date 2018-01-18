@@ -145,20 +145,93 @@ const actors = [{
 }];
 
 
-
-
-deliveries.forEach(shipper => { 
+function setPrice() {
+  deliveries.forEach(shipper => { 
     truckers.forEach(trucker => {
       if(trucker.id == shipper.truckerId)
       {
         //Step 1
-        shipper.price = shipper.distance*trucker.pricePerKm + shipper.volume*trucker.pricePerVolume;
+        //shipper.price = shipper.distance*trucker.pricePerKm + shipper.volume*trucker.pricePerVolume;
+
+        //Step 2
+        if(shipper.volume > 25)
+        {
+          trucker.pricePerVolume = trucker.pricePerVolume*(0.5);
+        }
+        else if(shipper.volume > 10)
+        {
+          trucker.pricePerVolume = trucker.pricePerVolume*(0.7);
+        }
+        else if(shipper.volume > 5)
+        {
+          trucker.pricePerVolume = trucker.pricePerVolume*(0.9);
+        }
+        
+        shipper.price = parseFloat(shipper.distance*trucker.pricePerKm + shipper.volume*trucker.pricePerVolume).toFixed(2);
       }
     });
-});
+  });
+}
 
+function setCommission() {
+  //Step 3
+  deliveries.forEach(shipper => { 
+    var commission = shipper.price*0.7;
+    shipper.commission.insurance = commission*0.5;
+    shipper.commission.treasury = parseInt(shipper.distance / 500);
+    shipper.commission.convargo = commission - shipper.commission.insurance - shipper.commission.treasury;
+  });
+}
+
+function setDeduction() {
+  //Step 4
+  deliveries.forEach(shipper => { 
+    if(shipper.options.deductibleReduction == true)
+    {
+      shipper.price = parseFloat(shipper.price) + parseFloat(shipper.volume);
+    }
+  });
+}
+
+function setDebitAndCredit() {
+  //Step 5
+  deliveries.forEach(shipper => { 
+    actors.forEach(actor => {
+      if(actor.deliveryId == shipper.id)
+      {
+        actor.payment.forEach(transaction => {
+          if(transaction.who == "shipper")
+          {
+            transaction.amount = shipper.price;
+          }
+          if(transaction.who == "trucker")
+          {
+            transaction.amount = shipper.price*0.7;
+          }
+          if(transaction.who == "insurance")
+          {
+            transaction.amount = shipper.commission.insurance;
+          }
+          if(transaction.who == "treasury")
+          {
+            transaction.amount = shipper.commission.treasury;
+          }
+          if(transaction.who == "convargo")
+          {
+            transaction.amount = shipper.commission.convargo + shipper.volume;
+          }
+        });
+      }
+    });
+  });
+}
+
+
+setPrice();
+setCommission();
+setDeduction();
+setDebitAndCredit();
+
+console.log(truckers);
 console.log(deliveries);
-
-//console.log(truckers);
-//console.log(deliveries);
-//console.log(actors);
+console.log(actors);
