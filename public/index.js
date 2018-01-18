@@ -145,7 +145,7 @@ const actors = [{
 }];
 
 
-function setPrice() {
+function setReductionPrice() {
   deliveries.forEach(shipper => { 
     truckers.forEach(trucker => {
       if(trucker.id == shipper.truckerId)
@@ -176,14 +176,14 @@ function setPrice() {
 function setCommission() {
   //Step 3
   deliveries.forEach(shipper => { 
-    var commission = shipper.price*0.7;
+    var commission = shipper.price*0.3;
     shipper.commission.insurance = commission*0.5;
-    shipper.commission.treasury = parseInt(shipper.distance / 500);
+    shipper.commission.treasury = 1 + parseInt(shipper.distance / 500);
     shipper.commission.convargo = commission - shipper.commission.insurance - shipper.commission.treasury;
   });
 }
 
-function setDeduction() {
+function payDeductibleOption() {
   //Step 4
   deliveries.forEach(shipper => { 
     if(shipper.options.deductibleReduction == true)
@@ -193,44 +193,62 @@ function setDeduction() {
   });
 }
 
-function setDebitAndCredit() {
+function payActors() {
   //Step 5
   deliveries.forEach(shipper => { 
     actors.forEach(actor => {
-      if(actor.deliveryId == shipper.id)
-      {
-        actor.payment.forEach(transaction => {
-          if(transaction.who == "shipper")
-          {
-            transaction.amount = shipper.price;
-          }
-          if(transaction.who == "trucker")
-          {
-            transaction.amount = shipper.price*0.7;
-          }
-          if(transaction.who == "insurance")
-          {
-            transaction.amount = shipper.commission.insurance;
-          }
-          if(transaction.who == "treasury")
-          {
-            transaction.amount = shipper.commission.treasury;
-          }
-          if(transaction.who == "convargo")
-          {
-            transaction.amount = shipper.commission.convargo + shipper.volume;
-          }
-        });
-      }
+      truckers.forEach(trucker => {
+        if(actor.deliveryId == shipper.id)
+        {
+          actor.payment.forEach(transaction => {
+            if(transaction.who == "shipper")
+            {
+              transaction.amount = shipper.price; //shipping price + deductible option
+            }
+            if(transaction.who == "trucker")
+            {
+              if(shipper.options.deductibleReduction == false)
+              {
+                transaction.amount = shipper.price*0.7;
+              }
+              else
+              {
+                transaction.amount = (shipper.price - shipper.volume)*0.7;
+              }
+              
+              //shipping price -30%
+            }
+            if(transaction.who == "insurance")
+            {
+              transaction.amount = shipper.commission.insurance;
+            }
+            if(transaction.who == "treasury")
+            {
+              transaction.amount = shipper.commission.treasury;
+            }
+            if(transaction.who == "convargo")
+            {
+              if(shipper.options.deductibleReduction == true)
+              {
+                transaction.amount = shipper.commission.convargo + shipper.volume;
+              }
+              else
+              {
+                transaction.amount = shipper.commission.convargo;
+              }             
+            } 
+          });
+        }
+      });
     });
   });
 }
 
 
-setPrice();
+setReductionPrice();
 setCommission();
-setDeduction();
-setDebitAndCredit();
+payDeductibleOption();
+payActors();
 
 console.log(truckers);
 console.log(deliveries);
